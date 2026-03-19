@@ -2,21 +2,68 @@ const express = require("express");
 const cors = require("cors");
 
 const app = express();
+
+// DB
+const connectDB = require("./config/db");
+connectDB();
+
 app.use(cors());
 app.use(express.json());
 
-let reviews = []; // temporary storage
+/* =========================
+   ROUTES
+========================= */
 
-// GET reviews
-app.get("/reviews/:businessId", (req, res) => {
-  const data = reviews.filter(r => r.businessId == req.params.businessId);
-  res.json(data);
+// Auth
+app.use("/auth", require("./routes/authRoutes"));
+
+// Business
+app.use("/businesses", require("./routes/businessRoutes"));
+
+// Reviews
+app.use("/reviews", require("./routes/reviewRoutes"));
+
+// Admin
+app.use("/admin", require("./routes/adminRoutes"));
+
+/* =========================
+   OPTIONAL: CREATE ADMIN (RUN ONCE)
+========================= */
+
+const User = require("./models/User");
+
+app.get("/create-admin", async (req, res) => {
+  try {
+    const existing = await User.findOne({ username: "admin" });
+
+    if (existing) {
+      return res.send("Admin already exists");
+    }
+
+    await User.create({
+      username: "admin",
+      password: "123",
+      role: "admin"
+    });
+
+    res.send("Admin created");
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
 });
 
-// POST review
-app.post("/review", (req, res) => {
-  reviews.push(req.body);
-  res.json({ message: "Review added" });
+/* =========================
+   ROOT
+========================= */
+
+app.get("/", (req, res) => {
+  res.send("API running");
 });
 
-app.listen(5000, () => console.log("Server running on 5000"));
+/* =========================
+   START SERVER
+========================= */
+
+app.listen(5000, () => {
+  console.log("Server running on port 5000");
+});
